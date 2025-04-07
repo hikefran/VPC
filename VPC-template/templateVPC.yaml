@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
   # VPC
-  fd-dashboardVPC:
+  FdDashboardVPC:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: '10.170.0.0/16'
@@ -12,7 +12,7 @@ Resources:
           Value: fd-dashboard
 
   # Internet Gateway (IGW)
-  fd-dashboardIGW:
+  FdDashboardIGW:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
@@ -23,14 +23,14 @@ Resources:
   AttachIGW:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref fd-dashboardVPC
-      InternetGatewayId: !Ref fd-dashboardIGW
+      VpcId: !Ref FdDashboardVPC
+      InternetGatewayId: !Ref FdDashboardIGW
 
   # Subnets Publicas e Privadas para cada AZ
-  fd-dashboardPublicSubnetAZ1:
+  FdDashboardPublicSubnetAZ1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
       CidrBlock: '10.170.16.0/20'
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       MapPublicIpOnLaunch: 'true'
@@ -38,20 +38,20 @@ Resources:
         - Key: Name
           Value: fd-dashboard-subnet-public1-us-east-1a
 
-  fd-dashboardPrivateSubnetAZ1:
+  FdDashboardPrivateSubnetAZ1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
       CidrBlock: '10.170.0.0/20'
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       Tags:
         - Key: Name
           Value: fd-dashboard-subnet-private1-us-east-1a
 
-  fd-dashboardPublicSubnetAZ2:
+  FdDashboardPublicSubnetAZ2:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
       CidrBlock: '10.170.32.0/20'
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: 'true'
@@ -59,20 +59,20 @@ Resources:
         - Key: Name
           Value: fd-dashboard-subnet-public2-us-east-1b
 
-  fd-dashboardPrivateSubnetAZ2:
+  FdDashboardPrivateSubnetAZ2:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
       CidrBlock: '10.170.160.0/20'
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       Tags:
         - Key: Name
           Value: fd-dashboard-subnet-private2-us-east-1b
 
-  fd-dashboardPublicSubnetAZ3:
+  FdDashboardPublicSubnetAZ3:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
       CidrBlock: '10.170.144.0/20'
       AvailabilityZone: !Select [ 2, !GetAZs '' ]
       MapPublicIpOnLaunch: 'true'
@@ -80,10 +80,10 @@ Resources:
         - Key: Name
           Value: fd-dashboard-subnet-public3-us-east-1c
 
-  fd-dashboardPrivateSubnetAZ3:
+  FdDashboardPrivateSubnetAZ3:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
       CidrBlock: '10.170.128.0/20'
       AvailabilityZone: !Select [ 2, !GetAZs '' ]
       Tags:
@@ -91,94 +91,94 @@ Resources:
           Value: fd-dashboard-subnet-private3-us-east-1c
 
   # NAT Gateway Elastic IP
-  fd-dashboardEIP:
+  FdDashboardEIP:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
 
   # NAT Gateway
-  fd-dashboardNATGateway:
+  FdDashboardNATGateway:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt fd-dashboardEIP.AllocationId
-      SubnetId: !Ref fd-dashboardPublicSubnetAZ1
+      AllocationId: !GetAtt FdDashboardEIP.AllocationId
+      SubnetId: !Ref FdDashboardPublicSubnetAZ1
       Tags:
         - Key: Name
           Value: fd-dashboard-NAT-Gateway
 
   # Route Table for Public Subnets
-  fd-dashboardPublicRouteTable:
+  FdDashboardPublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
 
   # Public Route to IGW for Public Subnets
-  fd-dashboardPublicRoute:
+  FdDashboardPublicRoute:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref fd-dashboardPublicRouteTable
+      RouteTableId: !Ref FdDashboardPublicRouteTable
       DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref fd-dashboardIGW
+      GatewayId: !Ref FdDashboardIGW
 
   # Associate Public Subnets with Route Table
-  fd-dashboardPublicSubnetRouteTableAssociationAZ1:
+  FdDashboardPublicSubnetRouteTableAssociationAZ1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref fd-dashboardPublicSubnetAZ1
-      RouteTableId: !Ref fd-dashboardPublicRouteTable
+      SubnetId: !Ref FdDashboardPublicSubnetAZ1
+      RouteTableId: !Ref FdDashboardPublicRouteTable
 
-  fd-dashboardPublicSubnetRouteTableAssociationAZ2:
+  FdDashboardPublicSubnetRouteTableAssociationAZ2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref fd-dashboardPublicSubnetAZ2
-      RouteTableId: !Ref fd-dashboardPublicRouteTable
+      SubnetId: !Ref FdDashboardPublicSubnetAZ2
+      RouteTableId: !Ref FdDashboardPublicRouteTable
 
-  fd-dashboardPublicSubnetRouteTableAssociationAZ3:
+  FdDashboardPublicSubnetRouteTableAssociationAZ3:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref fd-dashboardPublicSubnetAZ3
-      RouteTableId: !Ref fd-dashboardPublicRouteTable
+      SubnetId: !Ref FdDashboardPublicSubnetAZ3
+      RouteTableId: !Ref FdDashboardPublicRouteTable
 
   # Route Table for Private Subnets
-  fd-dashboardPrivateRouteTable:
+  FdDashboardPrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref fd-dashboardVPC
+      VpcId: !Ref FdDashboardVPC
 
   # Private Route to NAT Gateway for Private Subnets
-  fd-dashboardPrivateRoute:
+  FdDashboardPrivateRoute:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref fd-dashboardPrivateRouteTable
+      RouteTableId: !Ref FdDashboardPrivateRouteTable
       DestinationCidrBlock: '0.0.0.0/0'
-      NatGatewayId: !Ref fd-dashboardNATGateway
+      NatGatewayId: !Ref FdDashboardNATGateway
 
   # Associate Private Subnets with Route Table
-  fd-dashboardPrivateSubnetRouteTableAssociationAZ1:
+  FdDashboardPrivateSubnetRouteTableAssociationAZ1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref fd-dashboardPrivateSubnetAZ1
-      RouteTableId: !Ref fd-dashboardPrivateRouteTable
+      SubnetId: !Ref FdDashboardPrivateSubnetAZ1
+      RouteTableId: !Ref FdDashboardPrivateRouteTable
 
-  fd-dashboardPrivateSubnetRouteTableAssociationAZ2:
+  FdDashboardPrivateSubnetRouteTableAssociationAZ2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref fd-dashboardPrivateSubnetAZ2
-      RouteTableId: !Ref fd-dashboardPrivateRouteTable
+      SubnetId: !Ref FdDashboardPrivateSubnetAZ2
+      RouteTableId: !Ref FdDashboardPrivateRouteTable
 
-  fd-dashboardPrivateSubnetRouteTableAssociationAZ3:
+  FdDashboardPrivateSubnetRouteTableAssociationAZ3:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref fd-dashboardPrivateSubnetAZ3
-      RouteTableId: !Ref fd-dashboardPrivateRouteTable
+      SubnetId: !Ref FdDashboardPrivateSubnetAZ3
+      RouteTableId: !Ref FdDashboardPrivateRouteTable
 
 Outputs:
   VPCId:
     Description: VPC ID
-    Value: !Ref fd-dashboardVPC
+    Value: !Ref FdDashboardVPC
   PublicSubnets:
     Description: List of Public Subnet IDs
-    Value: !Join [ ',', [ !Ref fd-dashboardPublicSubnetAZ1, !Ref fd-dashboardPublicSubnetAZ2, !Ref fd-dashboardPublicSubnetAZ3 ] ]
+    Value: !Join [ ',', [ !Ref FdDashboardPublicSubnetAZ1, !Ref FdDashboardPublicSubnetAZ2, !Ref FdDashboardPublicSubnetAZ3 ] ]
   PrivateSubnets:
     Description: List of Private Subnet IDs
-    Value: !Join [ ',', [ !Ref fd-dashboardPrivateSubnetAZ1, !Ref fd-dashboardPrivateSubnetAZ2, !Ref fd-dashboardPrivateSubnetAZ3 ] ]
+    Value: !Join [ ',', [ !Ref FdDashboardPrivateSubnetAZ1, !Ref FdDashboardPrivateSubnetAZ2, !Ref FdDashboardPrivateSubnetAZ3 ] ]
