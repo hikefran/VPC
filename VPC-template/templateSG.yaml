@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+
+  FdDashboardFrontALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: fd-dashboard-front-alb-sg
+      GroupDescription: "Security group for FdDashboard Front ALB"
+      VpcId: vpc-04107254f4ec96579
+
+  FdDashboardAPISG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: FdDashboard-api-sg
+      GroupDescription: "Security group for FdDashboard API"
+      SecurityGroupIngress:
+        - CidrIp: 187.115.175.34/32
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+        - CidrIp: 187.115.175.34/32
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+
+  FdDashboardAPIALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: fd-dashboard-api-alb-sg
+      GroupDescription: "Security group for FdDashboard API ALB"
+
+  FdDashboardBastion:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: FdDashboard-bastion-sg
+      GroupDescription: "Security group for bastion EC2 instance"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+
+  FdDashboardFrontEcsSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: fd-dashboard-front-ecs-sg
+      GroupDescription: "Security group for FdDashboard Front ECS"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+
+  FdDashboardAPIEcsSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: fd-dashboard-api-ecs-sg
+      GroupDescription: "Security group for FdDashboard API ECS"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+
+  FdDashboardDbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: FdDashboard-db-sg
+      GroupDescription: "Security group for FdDashboard DB"
+      SecurityGroupIngress:
+        - CidrIp: 10.170.0.0/16
+          IpProtocol: tcp
+          FromPort: '1433'
+          ToPort: '1433'
+
+  FdDashboardFrontSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: FdDashboard-front-sg
+      GroupDescription: "Security group for FdDashboard front"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+        - CidrIp: 187.115.175.34/32
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+        - CidrIp: 200.178.92.82/32
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+        - CidrIp: 200.178.92.82/32
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+        - CidrIp: 187.115.175.34/32
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+
+Outputs:
+  FdDashboardFrontALBSGId:
+    Value: !Ref FdDashboardFrontALBSG
+  FdDashboardDbSGId:
+    Value: !Ref FdDashboardDbSG
+  FdDashboardAPISGId:
+    Value: !Ref FdDashboardAPISG
