@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "ALBs para fd-dashboard API e Front com redirecionamento HTTP -> HTTPS"
+
+Parameters:
+  SSLCertificateArn:
+    Type: String
+    Description: ARN do certificado ACM para HTTPS dos ALBs
+
+Resources:
+
+  # Target Group para API (vazio)
+  FdDashboardApiTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: fd-dashboard-api-tg
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: vpc-04107254f4ec96579
+      HealthCheckPath: /
+
+  # Target Group para Front (vazio)
+  FdDashboardFrontTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: fd-dashboard-front-tg
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: vpc-04107254f4ec96579
+      HealthCheckPath: /
+
+  # Load Balancer API
+  FdDashboardApiALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: fd-dashboard-api-alb
+      Scheme: internet-facing
+      Subnets:
+        - subnet-06ca5060929b41d76
+        - subnet-082a2c480c291b0a3
+        - subnet-036a49a80e3743d04
+      SecurityGroups:
+        - sg-031e7149c05484c2a
+      Type: application
+      IpAddressType: ipv4
+
+  # Load Balancer Front
+  FdDashboardFrontALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: fd-dashboard-front-alb
+      Scheme: internet-facing
+      Subnets:
+        - subnet-06ca5060929b41d76
+        - subnet-082a2c480c291b0a3
+        - subnet-036a49a80e3743d04
+      SecurityGroups:
+        - sg-0271f11980b07e591
+      Type: application
+      IpAddressType: ipv4
+
+  # Listener API HTTP (redirect para HTTPS)
+  ApiHttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref FdDashboardApiALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+
+  # Listener API HTTPS
+  ApiHttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref FdDashboardApiALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FdDashboardApiTG
+
+  # Listener Front HTTP (redirect para HTTPS)
+  FrontHttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref FdDashboardFrontALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+
+  # Listener Front HTTPS
+  FrontHttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref FdDashboardFrontALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FdDashboardFrontTG
+
+Outputs:
+
+  ApiALBArn:
+    Description: ARN do Load Balancer da API
+    Value: !Ref FdDashboardApiALB
+
+  FrontALBArn:
+    Description: ARN do Load Balancer do Front
+    Value: !Ref FdDashboardFrontALB
+
+  ApiTargetGroupArn:
+    Description: Target Group da API
+    Value: !Ref FdDashboardApiTG
+
+  FrontTargetGroupArn:
+    Description: Target Group do Front
+    Value: !Ref FdDashboardFrontTG
