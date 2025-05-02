@@ -1,125 +1,112 @@
-// Template ECS + Service com parâmetros preenchidos para teste
-{
-  "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Stack para subir novo ECS Cluster de teste + ECS Service reusando Task Definition.",
-  "Parameters": {},
-  "Resources": {
-    "ECSCluster": {
-      "Type": "AWS::ECS::Cluster",
-      "Properties": {
-        "ClusterName": "fd-dashboard-front-ecs-test",
-        "ClusterSettings": [{
-          "Name": "containerInsights",
-          "Value": "disabled"
-        }],
-        "Configuration": {
-          "ManagedStorageConfiguration": {
-            "KmsKeyId": "arn:aws:kms:us-east-1:478993292858:key/7cecbb35-5efc-43e4-b461-1aefb30e127b"
-          }
-        },
-        "ServiceConnectDefaults": {
-          "Namespace": "arn:aws:servicediscovery:us-east-1:478993292858:namespace/ns-tih5gesixigjkc5e"
-        }
-      }
-    },
-    "ECSLaunchTemplate": {
-      "Type": "AWS::EC2::LaunchTemplate",
-      "Properties": {
-        "LaunchTemplateData": {
-          "ImageId": {
-            "Fn::Sub": "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2/kernel-5.10/recommended/image_id}}"
-          },
-          "SecurityGroupIds": ["sg-0832fd235b4dc1dd5"],
-          "InstanceType": "t3.large",
-          "KeyName": "key-fd-dashboard",
-          "IamInstanceProfile": {
-            "Arn": "arn:aws:iam::478993292858:instance-profile/ecsInstanceRole"
-          },
-          "BlockDeviceMappings": [{
-            "DeviceName": "/dev/xvda",
-            "Ebs": {"VolumeSize": 30}
-          }],
-          "UserData": {
-            "Fn::Base64": "#!/bin/bash \necho ECS_CLUSTER=fd-dashboard-front-ecs-test >> /etc/ecs/ecs.config;"
-          }
-        }
-      }
-    },
-    "ECSAutoScalingGroup": {
-      "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "Properties": {
-        "MinSize": "1",
-        "MaxSize": "1",
-        "DesiredCapacity": "1",
-        "LaunchTemplate": {
-          "LaunchTemplateId": {"Ref": "ECSLaunchTemplate"},
-          "Version": {"Fn::GetAtt": ["ECSLaunchTemplate", "LatestVersionNumber"]}
-        },
-        "VPCZoneIdentifier": [
-          "subnet-0286e5be68a89e15d",
-          "subnet-02dc401556d4054d5",
-          "subnet-0c28f191c1f74eaab"
-        ],
-        "Tags": [{
-          "Key": "Name",
-          "Value": "ECS Instance fd-dashboard-front-ecs-test",
-          "PropagateAtLaunch": true
-        }]
-      }
-    },
-    "AsgCapacityProvider": {
-      "Type": "AWS::ECS::CapacityProvider",
-      "Properties": {
-        "AutoScalingGroupProvider": {
-          "AutoScalingGroupArn": {"Ref": "ECSAutoScalingGroup"},
-          "ManagedScaling": {"Status": "ENABLED", "TargetCapacity": 100},
-          "ManagedTerminationProtection": "DISABLED"
-        }
-      }
-    },
-    "ClusterCPAssociation": {
-      "Type": "AWS::ECS::ClusterCapacityProviderAssociations",
-      "Properties": {
-        "Cluster": {"Ref": "ECSCluster"},
-        "CapacityProviders": ["FARGATE", "FARGATE_SPOT", {"Ref": "AsgCapacityProvider"}],
-        "DefaultCapacityProviderStrategy": [{
-          "Base": 0,
-          "Weight": 1,
-          "CapacityProvider": {"Ref": "AsgCapacityProvider"}
-        }]
-      }
-    },
-    "ECSService": {
-      "Type": "AWS::ECS::Service",
-      "Properties": {
-        "Cluster": {"Ref": "ECSCluster"},
-        "TaskDefinition": "arn:aws:ecs:us-east-1:478993292858:task-definition/facedetection-ai-front-td:2",
-        "LaunchType": "EC2",
-        "ServiceName": "facedetection-ai-front-td-service-test",
-        "SchedulingStrategy": "REPLICA",
-        "DesiredCount": 1,
-        "HealthCheckGracePeriodSeconds": 5,
-        "AvailabilityZoneRebalancing": "ENABLED",
-        "DeploymentConfiguration": {
-          "DeploymentCircuitBreaker": {
-            "Enable": true,
-            "Rollback": true
-          },
-          "MaximumPercent": 200,
-          "MinimumHealthyPercent": 100
-        },
-        "DeploymentController": {"Type": "ECS"},
-        "ServiceConnectConfiguration": {"Enabled": false},
-        "PlacementStrategies": [
-          {"Type": "spread", "Field": "attribute:ecs.availability-zone"},
-          {"Type": "spread", "Field": "instanceId"}
-        ],
-        "EnableECSManagedTags": true
-      }
-    }
-  },
-  "Outputs": {
-    "ClusterName": {"Value": {"Ref": "ECSCluster"}},
-    "ServiceName": {"Value": {"Ref": "ECSService"}}
-  }
-}
+# templateTestECS.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack para subir novo ECS Cluster de teste + ECS Service reusando Task Definition.
+Parameters: {}
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: fd-dashboard-front-ecs-test
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled
+      Configuration:
+        ManagedStorageConfiguration:
+          KmsKeyId: arn:aws:kms:us-east-1:478993292858:key/7cecbb35-5efc-43e4-b461-1aefb30e127b
+      ServiceConnectDefaults:
+        Namespace: arn:aws:servicediscovery:us-east-1:478993292858:namespace/ns-tih5gesixigjkc5e
+
+  ECSLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2/kernel-5.10/recommended/image_id}}"
+        SecurityGroupIds:
+          - sg-0832fd235b4dc1dd5
+        InstanceType: t3.large
+        KeyName: key-fd-dashboard
+        IamInstanceProfile:
+          Arn: arn:aws:iam::478993292858:instance-profile/ecsInstanceRole
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 30
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            echo ECS_CLUSTER=fd-dashboard-front-ecs-test >> /etc/ecs/ecs.config
+
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MinSize: '1'
+      MaxSize: '1'
+      DesiredCapacity: '1'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ECSLaunchTemplate
+        Version: !GetAtt ECSLaunchTemplate.LatestVersionNumber
+      VPCZoneIdentifier:
+        - subnet-0286e5be68a89e15d
+        - subnet-02dc401556d4054d5
+        - subnet-0c28f191c1f74eaab
+      Tags:
+        - Key: Name
+          Value: ECS Instance fd-dashboard-front-ecs-test
+          PropagateAtLaunch: true
+
+  AsgCapacityProvider:
+    Type: AWS::ECS::CapacityProvider
+    Properties:
+      AutoScalingGroupProvider:
+        AutoScalingGroupArn: !Ref ECSAutoScalingGroup
+        ManagedScaling:
+          Status: ENABLED
+          TargetCapacity: 100
+        ManagedTerminationProtection: DISABLED
+
+  ClusterCPAssociation:
+    Type: AWS::ECS::ClusterCapacityProviderAssociations
+    Properties:
+      Cluster: !Ref ECSCluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+        - !Ref AsgCapacityProvider
+      DefaultCapacityProviderStrategy:
+        - Base: 0
+          Weight: 1
+          CapacityProvider: !Ref AsgCapacityProvider
+
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSCluster
+      TaskDefinition: arn:aws:ecs:us-east-1:478993292858:task-definition/facedetection-ai-front-td:2
+      LaunchType: EC2
+      ServiceName: facedetection-ai-front-td-service-test
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      HealthCheckGracePeriodSeconds: 5
+      AvailabilityZoneRebalancing: ENABLED
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+      PlacementStrategies:
+        - Type: spread
+          Field: attribute:ecs.availability-zone
+        - Type: spread
+          Field: instanceId
+      EnableECSManagedTags: true
+
+Outputs:
+  ClusterName:
+    Value: !Ref ECSCluster
+  ServiceName:
+    Value: !Ref ECSService
