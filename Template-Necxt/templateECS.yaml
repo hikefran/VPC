@@ -106,7 +106,7 @@ Resources:
       EnableECSManagedTags: true
       LoadBalancers:
         - TargetGroupArn: arn:aws:elasticloadbalancing:us-east-1:676206949005:targetgroup/speech-ai-hml-front-tg/f492f1edfd02ed26
-          ContainerName: speech-ai-front-container
+          ContainerName: speech-ai-hml-front-container
           ContainerPort: 80
       Role: arn:aws:iam::676206949005:role/ecsServiceRole
 
