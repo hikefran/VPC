@@ -1,192 +1,117 @@
-{
-  "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "The template used to create an ECS Cluster from the ECS Console.",
-  "Parameters": {
-    "ECSClusterName": {
-      "Type": "String",
-      "Description": "Specifies the ECS Cluster Name with which the resources would be associated",
-      "Default": "fd-dashboard-api-ecs"
-    },
-    "SecurityGroupIds": {
-      "Type": "CommaDelimitedList",
-      "Description": "Optional - Specifies the Comma separated list of the Security Group Id of an existing Security Group.",
-      "Default": ""
-    },
-    "VpcId": {
-      "Type": "String",
-      "Description": "Optional - Specifies the ID of an existing VPC in which to launch your container instances. If you specify a VPC ID, you must specify a list of existing subnets in that VPC. If you do not specify a VPC ID, a new VPC is created with at least 1 subnet.",
-      "Default": "",
-      "AllowedPattern": "^(?:vpc-[0-9a-f]{8,17}|)$",
-      "ConstraintDescription": "VPC Id must begin with 'vpc-' and have a valid uuid"
-    },
-    "SubnetIds": {
-      "Type": "CommaDelimitedList",
-      "Description": "Optional - Specifies the Comma separated list of existing VPC Subnet Ids where ECS instances will run",
-      "Default": ""
-    },
-    "LatestECSOptimizedAMI": {
-      "Description": "AMI ID",
-      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-      "Default": "/aws/service/ecs/optimized-ami/amazon-linux-2/kernel-5.10/recommended/image_id"
-    },
-    "IamRoleInstanceProfile": {
-      "Type": "String",
-      "Description": "Specifies the Name or the Amazon Resource Name (ARN) of the instance profile associated with the IAM role for the instance",
-      "Default": "arn:aws:iam::478993292858:instance-profile/ecsInstanceRole"
-    }
-  },
-  "Resources": {
-    "ECSCluster": {
-      "Type": "AWS::ECS::Cluster",
-      "Properties": {
-        "ClusterName": {
-          "Ref": "ECSClusterName"
-        },
-        "ClusterSettings": [
-          {
-            "Name": "containerInsights",
-            "Value": "disabled"
-          }
-        ],
-        "Configuration": {
-          "ManagedStorageConfiguration": {
-            "KmsKeyId": "arn:aws:kms:us-east-1:478993292858:key/7cecbb35-5efc-43e4-b461-1aefb30e127b"
-          }
-        },
-        "ServiceConnectDefaults": {
-          "Namespace": "arn:aws:servicediscovery:us-east-1:478993292858:namespace/ns-rbq7u7g2qhnl27xk"
-        },
-        "Tags": []
-      }
-    },
-    "ECSLaunchTemplate": {
-      "Type": "AWS::EC2::LaunchTemplate",
-      "DependsOn": "ECSCluster",
-      "Properties": {
-        "LaunchTemplateData": {
-          "ImageId": {
-            "Ref": "LatestECSOptimizedAMI"
-          },
-          "SecurityGroupIds": {
-            "Ref": "SecurityGroupIds"
-          },
-          "InstanceType": "t3.large",
-          "KeyName": "key-fd-dashboard",
-          "IamInstanceProfile": {
-            "Arn": {
-              "Ref": "IamRoleInstanceProfile"
-            }
-          },
-          "BlockDeviceMappings": [
-            {
-              "DeviceName": "/dev/xvda",
-              "Ebs": {
-                "VolumeSize": "30"
-              }
-            }
-          ],
-          "UserData": {
-            "Fn::Base64": {
-              "Fn::Sub": [
-                "#!/bin/bash \necho ECS_CLUSTER=${ClusterName} >> /etc/ecs/ecs.config;",
-                {
-                  "ClusterName": {
-                    "Ref": "ECSClusterName"
-                  }
-                }
-              ]
-            }
-          }
-        }
-      }
-    },
-    "ECSAutoScalingGroup": {
-      "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "DependsOn": "ECSCluster",
-      "Properties": {
-        "MinSize": "1",
-        "MaxSize": "1",
-        "DesiredCapacity": "1",
-        "LaunchTemplate": {
-          "LaunchTemplateId": {
-            "Ref": "ECSLaunchTemplate"
-          },
-          "Version": {
-            "Fn::GetAtt": [
-              "ECSLaunchTemplate",
-              "LatestVersionNumber"
-            ]
-          }
-        },
-        "VPCZoneIdentifier": {
-          "Ref": "SubnetIds"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "PropagateAtLaunch": true,
-            "Value": {
-              "Fn::Join": [
-                " - ",
-                [
-                  "ECS Instance",
-                  {
-                    "Ref": "ECSClusterName"
-                  }
-                ]
-              ]
-            }
-          }
-        ]
-      }
-    },
-    "AsgCapacityProvider": {
-      "Type": "AWS::ECS::CapacityProvider",
-      "Properties": {
-        "AutoScalingGroupProvider": {
-          "AutoScalingGroupArn": {
-            "Ref": "ECSAutoScalingGroup"
-          },
-          "ManagedScaling": {
-            "Status": "ENABLED",
-            "TargetCapacity": 100
-          },
-          "ManagedTerminationProtection": "DISABLED"
-        }
-      }
-    },
-    "ClusterCPAssociation": {
-      "Type": "AWS::ECS::ClusterCapacityProviderAssociations",
-      "DependsOn": "ECSCluster",
-      "Properties": {
-        "Cluster": {
-          "Ref": "ECSClusterName"
-        },
-        "CapacityProviders": [
-          "FARGATE",
-          "FARGATE_SPOT",
-          {
-            "Ref": "AsgCapacityProvider"
-          }
-        ],
-        "DefaultCapacityProviderStrategy": [
-          {
-            "Base": 0,
-            "Weight": 1,
-            "CapacityProvider": {
-              "Ref": "AsgCapacityProvider"
-            }
-          }
-        ]
-      }
-    }
-  },
-  "Outputs": {
-    "ECSCluster": {
-      "Description": "The created cluster.",
-      "Value": {
-        "Ref": "ECSCluster"
-      }
-    }
-  }
-}
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack para subir novo ECS Cluster speech-ai-hml-front-ecs
+Parameters: {}
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: speech-ai-hml-front-ecs
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled
+      Configuration:
+        ManagedStorageConfiguration:
+          KmsKeyId: arn:aws:kms:us-east-1:676206949005:key/6ed194c5-d0f0-4a21-96e5-93749d1b0686
+      ServiceConnectDefaults:
+        Namespace: arn:aws:servicediscovery:us-east-1:676206949005:namespace/ns-xbgssk4zhosioqjx
+
+  ECSLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2/kernel-5.10/recommended/image_id}}"
+        SecurityGroupIds:
+          - sg-0d1f0c8aaf072faab
+          - sg-0156472c6f16569a9
+        InstanceType: t2.large
+        KeyName: ecs-key
+        IamInstanceProfile:
+          Arn: arn:aws:iam::676206949005:instance-profile/ecsInstanceRole
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 30
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            echo ECS_CLUSTER=speech-ai-hml-front-ecs >> /etc/ecs/ecs.config
+
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MinSize: '1'
+      MaxSize: '1'
+      DesiredCapacity: '1'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ECSLaunchTemplate
+        Version: !GetAtt ECSLaunchTemplate.LatestVersionNumber
+      VPCZoneIdentifier:
+        - subnet-0b5b18c88d776fc96
+        - subnet-067c5630ff520a5d0
+        - subnet-0afb7c9ff4f5977bd
+      Tags:
+        - Key: Name
+          Value: ECS Instance speech-ai-hml-front-ecs
+          PropagateAtLaunch: true
+
+  AsgCapacityProvider:
+    Type: AWS::ECS::CapacityProvider
+    Properties:
+      AutoScalingGroupProvider:
+        AutoScalingGroupArn: !Ref ECSAutoScalingGroup
+        ManagedScaling:
+          Status: ENABLED
+          TargetCapacity: 100
+        ManagedTerminationProtection: DISABLED
+
+  ClusterCPAssociation:
+    Type: AWS::ECS::ClusterCapacityProviderAssociations
+    Properties:
+      Cluster: !Ref ECSCluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+        - !Ref AsgCapacityProvider
+      DefaultCapacityProviderStrategy:
+        - Base: 0
+          Weight: 1
+          CapacityProvider: !Ref AsgCapacityProvider
+
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSCluster
+      TaskDefinition: arn:aws:ecs:us-east-1:676206949005:task-definition/speech-ai-hml-front-td:1
+      LaunchType: EC2
+      ServiceName: speech-ai-hml-front-service
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      HealthCheckGracePeriodSeconds: 5
+      AvailabilityZoneRebalancing: ENABLED
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+      PlacementStrategies:
+        - Type: spread
+          Field: attribute:ecs.availability-zone
+        - Type: spread
+          Field: instanceId
+      EnableECSManagedTags: true
+      LoadBalancers:
+        - TargetGroupArn: arn:aws:elasticloadbalancing:us-east-1:676206949005:targetgroup/speech-ai-hml-front-tg/f492f1edfd02ed26
+          ContainerName: speech-ai-front-container
+          ContainerPort: 80
+      Role: arn:aws:iam::676206949005:role/ecsServiceRole
+
+Outputs:
+  ClusterName:
+    Value: !Ref ECSCluster
+  ServiceName:
+    Value: !Ref ECSService
